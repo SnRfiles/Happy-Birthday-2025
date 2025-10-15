@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Happy Birthday – Step 2 (Title + Pink Confetti)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700;900&family=Baloo+2:wght@700;800&family=Bungee&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Merienda:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000;               /* black background */
+      --pink: #ff76b6;          /* soft, not-too-bright pink */
+      --pink-dim: #ff6aa9;      /* slightly dimmer variant */
+      --pink-deep: #ff4b98;     /* deeper pink for contrast */
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    /* Stage fills the screen */
+    .stage {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+    }
+
+    /* Confetti canvas overlays everything but ignores pointer events */
+    .confetti-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0; /* behind title; cake will sit above */
+    }
+
+    /* The birthday title */    
+    .title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    margin: 0;
+    padding: 0 0.25rem;
+    text-align: center;
+    color: var(--pink);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 18px rgba(255, 118, 182, 0.2), 0 0 6px rgba(255, 118, 182, 0.35);
+    opacity: 0;
+    font-size: clamp(28px, 8vw, 84px);
+    white-space: nowrap;
+    z-index: 2; /* above confetti and cake */
+    }
+
+    /* Final resting spot (top) */
+    .title.top {
+    top: 24px;
+    left: 50%;
+    transform: translate(-50%, 0) scale(0.55);
+    opacity: 1;
+    }
+
+
+    .cake-area {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 0;          /* change to 28px if you plan to show a stand/tray underneath */
+        width: 70%;
+        height: 50vh;       /* same visual height as before */
+        z-index: 1;         /* above confetti, below title */
+    }
+
+    /* Cake: white rounded rectangle at bottom (70% width, ~50% height) */
+    .cake {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 50px;
+    width: 100%;
+    height: 50vh; /* about half the page height */
+    background: #ffffff;
+    border-radius: 28px 28px 12px 12px; /* softer at the top corners */
+    box-shadow: 0 12px 40px rgba(255, 255, 255, 0.1), 0 2px 0 rgba(255,255,255,0.9) inset;
+    z-index: 1; /* above confetti canvas, below title */
+    overflow: hidden; /* IMPORTANT: clip sprinkles to the cake shape */
+    filter: drop-shadow(0 28px 36px rgba(0,0,0,0.5));
+
+    }
+
+    /* Scalloped icing band near the top INSIDE the cake */
+    .cake::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 10px;                 /* <-- move to very top */
+    height: 44px;           /* a touch taller to let scallops hang down nicely */
+    /* repeating radial scallops aligned to top edge */
+    background:
+        radial-gradient(circle at 20px 0, #ffe2f0 18px, transparent 19px) repeat-x;
+    background-size: 40px 44px;    /* width per scallop, height of band */
+    background-position: 0 -3px;   /* nudge up so the scallop arc kisses the top edge */
+    opacity: 0.9;
+    pointer-events: none;
+    }
+
+    /* Thin pink trim line just above the scallops for a clean look */
+    .cake::after {
+    content: "";
+    position: absolute;
+    left: 0;               /* span full width so it hugs the edge cleanly */
+    right: 0;
+    top: 0;                /* <-- move to very top */
+    height: 6px;           /* a tiny bit thicker reads better at the edge */
+    border-radius: 0 0 4px 4px; /* soften only the lower corners */
+    background: linear-gradient(90deg, #ff76b6, #ff6aa9, #ff4b98);
+    opacity: 0.8;
+    pointer-events: none;
+    }
+
+    .stand {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -5px;                  /* sits above page bottom, below the raised cake */
+    width: 28%;
+    height: 18px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgb(255,255,255,0.14), rgba(255,255,255,0.05));
+    box-shadow:
+        0 8px 14px rgba(0,0,0,0.55),
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        inset 0 -2px 4px rgba(0,0,0,0.2);
+    z-index: 0;                   /* behind cake (cake has z-index: 1) */
+    pointer-events: none;
+    }
+
+
+    .stand::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 10px;
+    width: 12px;
+    height: 46px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.14), rgb(255,255,255,0.05));
+    box-shadow:
+        0 6px 14px rgba(0,0,0,0.45),
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        inset 0 -2px 3px rgba(0,0,0,0.18);
+    z-index: -1;                  /* behind the stand base */
+    pointer-events: none;
+    }
+
+
+    /* Long horizontal tray the cake sits on */
+    .stand-tray {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 40px;                          /* aligns with the cake bottom */
+    width: 68%;                             /* longer than the base; tweak 52–68% */
+    height: 12px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.2));
+    box-shadow:
+        0 8px 18px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.14),
+        inset 0 -2px 4px rgba(0,0,0,0.22);
+    z-index: 0;                             /* stay behind the cake */
+    pointer-events: none;
+    }
+
+
+    .candles {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: -220px;               /* raises candles above cake */
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: -30px;                /* space between the 2 and the 1 */
+    pointer-events: none;
+    }
+
+    .num-candle {
+        position: relative;
+        width: 100px;             /* overall candle size */
+        height: 120px;            /* leaves headroom for flame later */
+        display: grid;
+        place-items: end center;
+        
+    }
+
+    .num-candle .digit {
+        display: inline-block;
+
+        /* The stripe pattern: mostly white, thin pink lines */
+        background: repeating-linear-gradient(
+            45deg,
+            #ffffff 0px,        /* white base */
+            #ffffff 18px,       /* stripe width (white) */
+            #fb93c4 18px,       /* pink line start */
+            #f78dbe 22px        /* pink line thickness (4px) */
+            /* then repeats white again automatically */
+        );
+
+        /* Clip the gradient to the text shape */
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent; /* reveal the gradient inside the text */
+
+        /* Candle size/weight (keep your previous values if different) */
+        font-size: 200px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 1px;
+        transform: translateY(6px);
+
+        filter: drop-shadow(0 0 8px rgba(255, 118, 182, 0.12));
+
+        /* Light edge definition so white-on-white still reads */
+        -webkit-text-stroke: 1px rgba(0,0,0,0.10);
+        text-shadow:
+            0 0 4px rgba(255, 255, 255, 0.2),
+            0 2px 10px rgba(255, 118, 182, 0.2);
+
+        font-family: "Fredoka", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial; /* or your chosen font */
+    }
+
+
+    .num-candle .flame {
+    position: absolute;
+    left: 50%;
+    top: 12px;                        /* raise/lower the flame here */
+    width: 17px;
+    height: 35px;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 0 6px rgba(255, 190, 60, 0.28)); /* very light glow */
+    pointer-events: none;
+    z-index: -1;
+    }
+
+    .num-candle .flame .sway {
+        position: absolute;
+        left: 50%;
+        bottom: 0;                         /* bottom anchored to the candle top */
+        width: 17px;
+        height: 35px;
+        transform: translateX(-50%);
+        transform-origin: 50% 100%;        /* PIVOT at bottom center */
+        animation: flameSway 2.2s ease-in-out infinite;
+    }
+
+    .num-candle .flame .sway::before{
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: 0;                         /* sits on the pivot point */
+        width: 23px;
+        height: 50px;
+        transform: translateX(-50%);
+        background: radial-gradient(50% 70% at 50% 40%,
+            #ffd46a 0%, #ffab3c 60%, rgba(255,171,60,0.0) 70%);
+        border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%;
+        opacity: 0.92;
+    }
+
+
+    .num-candle .flame .sway .inner {
+        position: absolute;
+        left: 50%;
+        bottom: 6px;
+        width: 7px;
+        height: 15px;
+        transform: translateX(-50%);
+        background: radial-gradient(50% 60% at 50% 40%,
+                    #fff6c9 0%, #ffd46a 70%, rgba(255,212,106,0.0) 80%);
+        border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%;
+        filter: drop-shadow(0 0 4px rgba(255, 212, 106, 0.35));
+        transform-origin: 50% 100%;        /* pulse from its base */
+        animation: flamePulse 1.8s ease-in-out infinite;
+    }
+
+    .num-candle .flame .inner {
+    position: absolute;
+    left: 50%;
+    top: 3px;
+    width: 7px;
+    height: 10px;
+    transform: translateX(-50%);
+    background: radial-gradient(50% 60% at 50% 40%,
+                #fff6c9 0%, #ffd46a 70%, rgba(255,212,106,0.0) 80%);
+    border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%;
+    filter: drop-shadow(0 0 4px rgba(255, 212, 106, 0.35));
+    animation: flamePulse 1.8s ease-in-out infinite;
+    }
+
+    .num-candle.one .flame { 
+    left: calc(50% + 13px);
+    }
+
+
+    @keyframes flameSway {
+    0%   { transform: translateX(-50%) rotate(-2deg); }
+    50%  { transform: translateX(-50%) rotate(2deg);  }
+    100% { transform: translateX(-50%) rotate(-2deg); }
+    }
+
+    @keyframes flamePulse {
+    0%, 100% { transform: translateX(-50%) scale(1);   opacity: 0.95; }
+    50%      { transform: translateX(-50%) scale(1.06); opacity: 1.00; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+    .num-candle .flame,
+    .num-candle .flame .inner {
+        animation: none !important;
+    }
+    }
+
+    /* Ember container anchored at flame base */
+    .num-candle .flame .embers {
+    position: absolute;
+    left: 50%;
+    bottom: 0;                    /* pin to the candle top */
+    transform: translateX(-50%);
+    width: 0; height: 0;          /* sparks are absolutely placed */
+    pointer-events: none;
+    }
+
+    /* Individual sparks */
+    .num-candle .flame .embers i {
+    position: absolute;
+    left: -2px;                   /* start centered; we’ll drift via --dx */
+    bottom: 0;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: rgba(255, 210, 90, 0.9);            /* warm ember */
+    box-shadow: 0 0 6px rgba(255, 190, 60, 0.35);   /* soft glow */
+    opacity: 0;
+    animation: emberRise 1.8s linear infinite;
+    }
+
+    /* Stagger timing + drift so it feels organic */
+    .num-candle .flame .embers i:nth-child(1) {
+    --dx: -6px;  --rise: 36px; animation-delay: 0s;
+    }
+    .num-candle .flame .embers i:nth-child(2) {
+    --dx: 4px;   --rise: 44px; animation-delay: .3s; animation-duration: 2.1s;
+    }
+    .num-candle .flame .embers i:nth-child(3) {
+    --dx: -3px;  --rise: 40px; animation-delay: .6s; animation-duration: 2.0s;
+    }
+    .num-candle .flame .embers i:nth-child(4) {
+    --dx: 7px;   --rise: 48px; animation-delay: .9s; animation-duration: 2.2s;
+    }
+
+    /* Upward drift + fade; base stays pinned */
+    @keyframes emberRise {
+    0%   { transform: translate(0, 0) scale(1);   opacity: 0; }
+    10%  { opacity: .9; }
+    60%  { opacity: .6; }
+    100% { transform: translate(var(--dx, 0px), calc(-1 * var(--rise, 42px))) scale(.6);
+            opacity: 0; }
+    }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+    .num-candle .flame .embers i { animation: none !important; opacity: 0.5; }
+    }
+
+
+    /* Single sprinkle pill */
+    .sprinkle {
+    position: absolute;
+    width: 10px;
+    height: 3px;
+    border-radius: 3px;
+    opacity: 0.9;
+    filter: drop-shadow(0 0 1px rgba(0,0,0,0.2));
+    pointer-events: none;
+    }
+
+    /* Color variants (rainbow, kept small and tasteful) */
+    .sprinkle.red {    background: #ff4d4d; }
+    .sprinkle.orange { background: #ff9c33; }
+    .sprinkle.yellow { background: #ffd633; }
+    .sprinkle.green {  background: #2ecc71; }
+    .sprinkle.blue {   background: #3498db; }
+    .sprinkle.purple { background: #a66cff; }
+
+    /* Animation keyframes: fade in centered, then move up & shrink */
+    @keyframes popAndRise {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 1; transform: translate(-50%, 0) scale(0.55); top: 24px; }
+    }
+
+    /* Optional subtle glow pulse while it travels */
+    @keyframes glowPulse {
+      0%, 100% { text-shadow: 0 0 12px rgba(255, 118, 182, 0.25), 0 0 4px rgba(255, 118, 182, 0.35); }
+      50% { text-shadow: 0 0 22px rgba(255, 118, 182, 0.45), 0 0 10px rgba(255, 118, 182, 0.55); }
+    }
+
+    @keyframes topGlow {
+    0%, 100% {
+        text-shadow:
+        0 0 10px rgba(255,118,182,0.18),
+        0 0 4px  rgba(255,118,182,0.22);
+    }
+    50% {
+        text-shadow:
+        0 0 18px rgba(255,118,182,0.30),
+        0 0 8px  rgba(255,118,182,0.36);
+    }
+    }
+
+
+
+    .title.animate { 
+      animation-name: popAndRise, glowPulse; 
+      animation-duration: 3.8s, 2.4s; 
+      animation-timing-function: cubic-bezier(.2,.7,.15,1), ease-in-out; 
+      animation-iteration-count: 1, 2; 
+    }
+
+    .title.top:not(.animate) {
+    animation: topGlow 2.6s ease-in-out infinite;
+    }
+
+    /* Helper note (dev only) */
+    .hint {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #bbb;
+      font-size: 12px;
+      letter-spacing: 0.3px;
+      opacity: 0.6;
+      user-select: none;
+    }
+
+    /* Accessibility: prefers-reduced-motion */
+    @media (prefers-reduced-motion: reduce) {
+      .title.animate { animation: none; }
+      .title { opacity: 1; }
+    }
+
+
+    .cake-message {
+    position: absolute;
+    /* Keep clear of the top trim/scallops and the bottom edge */
+    inset: 72px 10% 64px 10%;  /* top | right | bottom | left */
+    display: grid;
+    place-items: center;
+    text-align: center;
+
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    pointer-events: auto;       /* message is display-only */
+    z-index: 1;
+    }
+
+    .cake-message::-webkit-scrollbar { /* Chrome/Edge/Safari */
+    height: 8px; width: 8px;
+    }
+    .cake-message::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.15);
+    border-radius: 6px;
+    }
+
+.cake-message p {
+  margin: 0;
+  font-family: "Merienda", "Fredoka", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  font-weight: 500;
+  font-size: clamp(14px, 1.5vw, 17px); /* a bit smaller */
+  line-height: 1.65;
+  letter-spacing: 0.20px;
+  text-align: center;
+  max-width: 48ch;
+
+  /* Color: warm gray with a hint of pink so it harmonizes with your palette */
+  color: #5b4a55; /* try #6a5461 for slightly richer */
+}
+
+
+
+    /* Start hidden; fade/slide in later */
+.cake-area,
+.stand,
+.stand-tray,
+.candles {
+  opacity: 0;
+  transition: opacity .7s ease;
+  will-change: opacity, transform;
+}
+
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <canvas id="confetti" class="confetti-canvas" aria-hidden="true"></canvas>
+    <!-- Cake placeholder: rounded white rectangle at bottom -->
+    <div class="cake-area" data-delay="1">
+        <div class="cake" role="img" aria-label="Birthday cake base">
+            <div class="sprinkles" aria-hidden="true"></div>
+            <div class ="cake-message">
+                <p>
+                    Happy Birthday Roaya!<br>
+                    I want to start off by saying thank you and last year I said you mean a lot to me but now you mean the worlddd to me frfr.<br>
+                    I had a bunch of goals before but I think they all now align with this one goal of just making sure you're always happy, because If you're happy I am happy and all of my goals from now on include you being happy.<br>
+                    There are so many things that I love and appreciate about you and I could go on forever but I'll keep it as breif as possible (I know it's not that breif, sorryyy)<br>
+                    I'll start with saying that you're sooo kind and caring, you don't always wanna show it since you're so nonchalant but I see it and I really appreciate it so much.<br>
+                    You're super smart and talented, when you put your mind to something you always surprise me how easily you pick up on it, the way you think is completely different from the norm you don't follow the majority opinion you always have your own thoughts and I admire that so much.<br>
+                    You're superr funnyyy and always find a way to make me smile, you make it so easy to just never be down and your presence always lightens up the mood.<br>
+                    When I say this please don't take it lightly, when I say you're the most beautiful woman/person/things my eyes have every seen, I really do mean it. There's nothing in this world that will ever compare to how beautiful you are. Even beautiful is not enough to describe you, you are the definition of perfect.<br>
+                    When I think of heaven and the contents of it, the first thing that comes to mind is you.<br>
+                    I know I can be super cringy with all this stuff sometimes, trust me no one hates cringe more than me, but I just can't help it when its about you. I have to tell you some how and being straight foward is what you deserve.<br>
+                    I make dua that you will have a happy year and continue to stay happy for the rest of your years, to be apart of the happiness and to aid that happiness.<br>
+                    I hope you have an amazing year and get to achieve all your goals and dreams.<br>
+                    You deserve all the happiness in the world, and I hope you get it.<br>
+                    Thank you sooo much for just being you, I'm feel so happy knowing I get to talk to someone as amazing as you everyday.<br>
+                    HAPPY BIRTHDAYYY AGAIN.
+                </p>
+            </div>
+        </div>
+    <!-- Candles -->
+        <div class="candles" aria-hidden="true">
+            <div class="num-candle two">
+                <span class="digit">2</span>
+                <div class="flame">
+                    <span class="sway">
+                        <span class="inner"></span>
+                    </span>
+                    <span class="embers">
+                        <i></i><i></i><i></i><i></i><i></i>
+                    </span>
+                </div>
+            </div>
+            <div class="num-candle one">
+                <span class="digit">1</span>
+                <div class="flame">
+                    <span class="sway">
+                        <span class="inner"></span>
+                    </span>
+                    <span class="embers">
+                        <i></i><i></i><i></i><i></i><i></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="stand" aria-hidden="true"></div>
+    <div class="stand-tray" aria-hidden="true"></div>
+    <!-- Title -->
+    <h1 id="title" class="title">Happy Birthday&nbsp;Roaya</h1>
+    <div class="hint"></div>
+  </main>
+
+  <script>
+    const title = document.getElementById('title');
+    const canvas = document.getElementById('confetti');
+    const ctx = canvas.getContext('2d');
+
+    const DURATION_MS = 3800; // match title animation
+
+
+    // How long to wait AFTER the title parks at the top, before showing cake/etc.
+    // 2000 = 2 seconds, 3000 = 3 seconds, etc.
+    const FADE_IN_DELAY_MS = 0;
+
+    function hidePostTitleEls() {
+    document.querySelectorAll('.cake-area, .stand, .stand-tray, .candles')
+        .forEach(el => {
+        el.style.opacity = '0';
+        });
+    }
+
+    function revealPostTitleEls() {
+    document.querySelectorAll('.cake-area, .stand, .stand-tray, .candles')
+        .forEach(el => {
+        el.style.opacity = '1';
+        });
+    }
+
+    function sizeCanvas() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const { width, height } = canvas.getBoundingClientRect();
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    window.addEventListener('resize', () => {
+        sizeCanvas();
+        createSprinkles(); // re-layout sprinkles inside the cake after resize
+    });
+
+    function playIntro() {
+
+        hidePostTitleEls();
+
+      // Restart title animation
+      title.classList.remove('animate', 'top');
+      void title.offsetWidth; // reflow
+      title.classList.add('animate');
+
+      // Run confetti
+      runConfetti();
+    }
+
+    // Confetti implementation (pink-only, fades out by the end)
+    function runConfetti() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        // Respect reduced motion; just ensure title ends up at top.
+        title.classList.add('top');
+        return;
+      }
+
+      sizeCanvas();
+
+      const W = canvas.clientWidth;
+      const H = canvas.clientHeight;
+      const count = Math.floor((W * H) / 12000) + 80; // scale by viewport
+
+      const colors = ['#ff76b6', '#ff6aa9', '#ff4b98'];
+
+      const pieces = Array.from({ length: count }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 4; // px/frame
+        return {
+          x: Math.random() * W,
+          y: -20 - Math.random() * 40, // start slightly above view
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed + 1.2, // drift downward
+          rot: Math.random() * Math.PI,
+          vr: (Math.random() - 0.5) * 0.3,
+          size: 6 + Math.random() * 10,
+          color: colors[(Math.random() * colors.length) | 0],
+          shape: Math.random() < 0.5 ? 'rect' : 'circle'
+        };
+      });
+
+      const start = performance.now();
+
+      function frame(now) {
+        const t = now - start;
+        const progress = Math.min(1, t / DURATION_MS);
+        const fade = 1 - progress; // fade out over time
+
+        // Clear
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw pieces
+        ctx.save();
+        ctx.globalAlpha = fade; // global fade
+
+        for (const p of pieces) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.06;   // gravity
+          p.vx *= 0.995;  // slight air resistance
+          p.rot += p.vr;
+
+          // wrap horizontally for a fuller effect
+          if (p.x < -20) p.x = W + 20;
+          if (p.x > W + 20) p.x = -20;
+
+          // draw one piece without disturbing the global transform (DPR scaling)
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          if (p.shape === 'rect') {
+            ctx.fillRect(-p.size * 0.5, -p.size * 0.5, p.size, p.size * (0.6 + Math.random() * 0.8));
+          } else {
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size * 0.45, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+        ctx.restore();
+
+        if (progress < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          // Final clear to remove any residuals
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    // Ensure final top state persists
+    title.addEventListener('animationend', (e) => {
+      if (e.animationName === 'popAndRise') {
+        title.classList.add('top');
+        setTimeout(revealPostTitleEls, FADE_IN_DELAY_MS); // <— wait N ms, then fade in
+      }
+    });
+
+    function createSprinkles() {
+        const cake = document.querySelector('.cake');
+        const wrap = cake.querySelector('.sprinkles');
+        if (!wrap) return;
+
+        // Clear existing sprinkles (if user hits "r" to replay)
+        wrap.innerHTML = "";
+
+        const SPRINKLE_COUNT = 120; // tweak density here (80–160 is nice)
+        const COLORS = ["red","orange","yellow","green","blue","purple"];
+
+        const padX = 16; // keep sprinkles away from curved edges a bit
+        const padYTop = 40;  // avoid overlapping title/trim area
+        const padYBottom = 14;
+
+        const SAFE_CENTER_X = 50;  // %
+        const SAFE_CENTER_Y = 48;  // %
+        const SAFE_WIDTH_PCT = 80; // horizontal diameter % (increase -> bigger hole)
+        const SAFE_HEIGHT_PCT = 80; // vertical diameter % (increase -> bigger hole)
+
+        const rect = cake.getBoundingClientRect();
+
+        function inSafeZone(xPct, yPct) {
+            // Normalize to ellipse equation ((x/a)^2 + (y/b)^2 <= 1)
+            const dx = (xPct - SAFE_CENTER_X) / (SAFE_WIDTH_PCT / 2);
+            const dy = (yPct - SAFE_CENTER_Y) / (SAFE_HEIGHT_PCT / 2);
+            return (dx * dx + dy * dy) <= 1;
+        }
+
+        for (let i = 0; i < SPRINKLE_COUNT; i++) {
+            let xPct, yPct, attempts = 0;
+            do {
+                // random position in padded area
+                xPct = (padX+ Math.random() * (rect.width  - padX * 2)) / rect.width  * 100;
+                yPct = (padYTop  + Math.random() * (rect.height - padYTop - padYBottom)) / rect.height * 100;
+                attempts++;
+                // bail out after a few attempts to avoid infinite loops on tiny screens
+                if (attempts > 20) break;
+                } while (inSafeZone(xPct, yPct));
+
+            const el = document.createElement('span');
+            el.className = `sprinkle ${COLORS[(Math.random() * COLORS.length) | 0]}`;
+            const rot = (Math.random() * 180 - 90).toFixed(1);
+
+            el.style.left = `${xPct}%`;
+            el.style.top = `${yPct}%`;
+            el.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
+
+            wrap.appendChild(el);
+        }
+    }
+
+
+    // On first load
+    window.addEventListener('load', () => {
+      playIntro();
+      createSprinkles();
+    });
+
+    // Optional: replay with a key press (handy while iterating)
+    window.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'r') {
+        playIntro();
+      }
+    });
+  </script>
+</body>
+</html>
+
